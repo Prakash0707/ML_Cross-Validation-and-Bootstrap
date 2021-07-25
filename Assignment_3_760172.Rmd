@@ -1,0 +1,154 @@
+---
+title: "Resampling Methods"
+author: "Bhanu_Prakash"
+date: "7/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Resampling Methods
+
+A machine learning professor and his long-term girlfriend are planning to tie the knot. He had never been diamond shopping before. He was surrounded by a bewildering array of diamond features, arrangements, and pricing in the mall.he discovered that diamonds are essentially defined by polish, symmetry, and certification, other factors to consider are colour, cut, carat weight, and clarity.
+
+Linear Regression Model is already built to predict the price. we will cross validate and Bootstrap the regression
+
+```{r df1}
+library(openxlsx)
+library(dplyr)
+library(tidyverse)
+library(caret)
+library(boot)
+```
+## summary statistics
+
+The minimum, first quartile, median, mean, third quartile, and maximum values are included in the metric data summary. The summary of non-metric data, on the other hand, includes a summary of length, class, and mode.
+
+```{r}
+df1 <- read.xlsx(xlsxFile = "MBA6636_SM21_Professor_Proposes_Data.xlsx", sheet = 1, skipEmptyRows = FALSE,colNames = TRUE)
+summary(df1)
+```
+## Repeated K-fold cross-validation for linear regression
+
+The K-fold cross-validation with 5 folds and repeated 3 times
+```{r warning=FALSE}
+set.seed(10)
+train_control <- trainControl(method = "repeatedcv",
+                              number = 5, repeats = 3)
+model <- train(Price ~., data = df1,
+               method = "lm",
+               trControl = train_control)
+print(model)
+```
+
+The K-fold cross-validation with 10 folds and repeated 3 times
+```{r warning=FALSE}
+set.seed(11)
+train_control <- trainControl(method = "repeatedcv",
+                              number = 10, repeats = 3)
+model_10 <- train(Price ~., data = df1,
+               method = "lm",
+               trControl = train_control)
+print(model_10)
+```
+The K-fold cross-validation with n-1 folds and repeated 3 times
+```{r warning=FALSE}
+set.seed(12)
+train_control <- trainControl(method = "repeatedcv",
+                              number = 439, repeats = 3)
+model <- train(Price ~., data = df1,
+               method = "lm",
+               trControl = train_control)
+print(model)
+```
+## Summary of Cross validation
+ By observing above values it is clear that Accuracy increases with the increase of k values
+
+## Bootstrap 
+```{r warning=FALSE}
+# Creating Function to obtain R-Squared from the data
+r_squared <- function(formula, data, indices) {
+  val <- data[indices,] # selecting sample with boot 
+  fit <- lm(formula, data=val)
+  return(summary(fit)$r.square)
+}
+output <- boot(data=df1, statistic=r_squared, 
+               R=5000, formula=Price~.)
+output
+```
+## plot
+```{r}
+plot(output)
+```
+## Bootstrap confidence Interval calculation
+```{r warning=FALSE}
+boot.ci(output, type=c("norm","perc","bca"))
+```
+## 
+## logistic regression
+##
+The given data is related with direct marketing campaigns of a Portuguese 
+banking institution. The campaign is based on phone calls. My goal in this 
+exercise is to test a few classification models in addition to determining 
+whether or not a customer will subscribe.
+
+This Assignment deals with cross validation and Bootstrap of the regression
+
+## data
+```{r}
+#loading dataset
+df2 <- read.csv("bank-full.csv",sep = ";",header = T)
+```
+## summary
+```{r}
+summary(df2)
+```
+converting y as factor
+```{r}
+df2$y <- as.factor(df2$y)
+```
+## cross validation for 5 folds
+```{r warning=FALSE}
+set.seed(20)
+train_control <- trainControl(method = "cv",
+                              number = 5, classProbs = TRUE)
+model <- train(y ~., data = df2,
+               method = "glm",
+               trControl = train_control)
+print(model)
+```
+## cross validation for 10 folds
+```{r warning=FALSE}
+set.seed(21)
+train_control <- trainControl(method = "cv",
+                              number = 10, classProbs = TRUE)
+model <- train(y ~., data = df2,
+               method = "glm",
+               trControl = train_control)
+print(model)
+```
+## Summary
+Accuracy of the model is around 90%
+##
+## Bootstrap
+```{r warning=FALSE}
+coef_function <- function(formula, data, indices) {
+  d <- data[indices,] #allows select sample
+  fit <- lm(formula, data=d) #fit regression model
+  return(coef(fit)) 
+}
+reps <- boot(data=df2, statistic=coef_function, R=200,formula=y~.)
+reps
+```
+## plot
+```{r}
+plot(reps, index=1) #intercept of model
+plot(reps, index=2) ##disp predictor variable
+```
+## Bootstrap confidence Interval calculation
+```{r warning=FALSE}
+boot.ci(boot.out = reps, type=c("norm","basic","percentile"), index = 1)
+boot.ci(boot.out = reps, type=c("norm","basic","percentile"), index = 2)
+```
